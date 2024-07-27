@@ -3,7 +3,7 @@ from .models import User, Teacher, Student
 
 
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
@@ -23,6 +23,15 @@ class UserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
+
 
 class TeacherSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -30,12 +39,6 @@ class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
         fields = ["user", "subjects", "qualification", "experience"]
-
-    def create(self, validated_data):
-        user_data = validated_data.pop("user")
-        user = UserSerializer.create(UserSerializer(), validated_data=user_data)
-        teacher, created = Teacher.objects.update_or_create(user=user, **validated_data)
-        return teacher
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -50,9 +53,3 @@ class StudentSerializer(serializers.ModelSerializer):
             "enrollment_date",
             "assigned_teacher",
         ]
-
-    def create(self, validated_data):
-        user_data = validated_data.pop("user")
-        user = UserSerializer.create(UserSerializer(), validated_data=user_data)
-        student, created = Student.objects.update_or_create(user=user, **validated_data)
-        return student

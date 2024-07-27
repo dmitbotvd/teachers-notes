@@ -1,4 +1,4 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -42,7 +42,7 @@ class RegisterTeacherView(generics.CreateAPIView):
     serializer_class = TeacherSerializer
 
     def perform_create(self, serializer):
-        user_data = serializer.validated_data.pop('user')
+        user_data = serializer.validated_data.pop("user")
         user_serializer = UserSerializer(data=user_data)
         user_serializer.is_valid(raise_exception=True)
         user = user_serializer.save(is_active=False)
@@ -70,7 +70,7 @@ class RegisterStudentView(generics.CreateAPIView):
     serializer_class = StudentSerializer
 
     def perform_create(self, serializer):
-        user_data = serializer.validated_data.pop('user')
+        user_data = serializer.validated_data.pop("user")
         user_serializer = UserSerializer(data=user_data)
         user_serializer.is_valid(raise_exception=True)
         user = user_serializer.save(is_active=False)
@@ -144,3 +144,30 @@ class LogoutView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return User.objects.filter(id=self.request.user.id)
+
+
+class TeacherViewSet(viewsets.ModelViewSet):
+    queryset = Teacher.objects.all()
+    serializer_class = TeacherSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Teacher.objects.filter(user=self.request.user)
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Student.objects.filter(user=self.request.user)
