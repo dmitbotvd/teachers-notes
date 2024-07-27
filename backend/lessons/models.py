@@ -1,6 +1,5 @@
-# lessons/models.py
 from django.db import models
-from students.models import Student
+from accounts.models import Student
 
 
 class Lesson(models.Model):
@@ -13,8 +12,8 @@ class Lesson(models.Model):
     plan = models.TextField(null=True, blank=True)
 
     class Meta:
-        verbose_name = 'Lesson'
-        verbose_name_plural = 'Lessons'
+        verbose_name = "Lesson"
+        verbose_name_plural = "Lessons"
 
     def __str__(self):
         return f"Lesson on {self.date} for {self.student.user.username}"
