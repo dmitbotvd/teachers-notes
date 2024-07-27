@@ -8,7 +8,6 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
-from django.views import View
 from .models import User, Teacher, Student
 from .serializers import UserSerializer, TeacherSerializer, StudentSerializer
 from .tokens import account_activation_token
@@ -37,7 +36,65 @@ class RegisterUserView(generics.CreateAPIView):
         email.send()
 
 
-class ActivateUserView(View):
+class RegisterTeacherView(generics.CreateAPIView):
+    queryset = Teacher.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = TeacherSerializer
+
+    def perform_create(self, serializer):
+        user_data = serializer.validated_data.pop('user')
+        user_serializer = UserSerializer(data=user_data)
+        user_serializer.is_valid(raise_exception=True)
+        user = user_serializer.save(is_active=False)
+        teacher = serializer.save(user=user)
+        current_site = get_current_site(self.request)
+        mail_subject = "Activate your account."
+        message = render_to_string(
+            "accounts/activation_email.html",
+            {
+                "user": user,
+                "domain": current_site.domain,
+                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                "token": account_activation_token.make_token(user),
+            },
+        )
+        to_email = user.email
+        email = EmailMessage(mail_subject, message, to=[to_email])
+        email.send()
+        return teacher
+
+
+class RegisterStudentView(generics.CreateAPIView):
+    queryset = Student.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = StudentSerializer
+
+    def perform_create(self, serializer):
+        user_data = serializer.validated_data.pop('user')
+        user_serializer = UserSerializer(data=user_data)
+        user_serializer.is_valid(raise_exception=True)
+        user = user_serializer.save(is_active=False)
+        student = serializer.save(user=user)
+        current_site = get_current_site(self.request)
+        mail_subject = "Activate your account."
+        message = render_to_string(
+            "accounts/activation_email.html",
+            {
+                "user": user,
+                "domain": current_site.domain,
+                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                "token": account_activation_token.make_token(user),
+            },
+        )
+        to_email = user.email
+        email = EmailMessage(mail_subject, message, to=[to_email])
+        email.send()
+        return student
+
+
+class ActivateUserView(generics.GenericAPIView):
+    permission_classes = (AllowAny,)
+
     def get(self, request, uidb64, token, *args, **kwargs):
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
