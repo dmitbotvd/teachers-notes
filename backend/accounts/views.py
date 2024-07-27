@@ -9,7 +9,13 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from .models import User, Teacher, Student
-from .serializers import UserSerializer, TeacherSerializer, StudentSerializer
+from .serializers import (
+    UserSerializer,
+    TeacherSerializer,
+    StudentSerializer,
+    EmptySerializer,
+    LoginSerializer,
+)
 from .tokens import account_activation_token
 
 
@@ -119,27 +125,25 @@ class ActivateUserView(generics.GenericAPIView):
 
 class LoginView(generics.GenericAPIView):
     permission_classes = (AllowAny,)
+    serializer_class = LoginSerializer
 
     def post(self, request, *args, **kwargs):
-        email = request.data.get("email")
-        password = request.data.get("password")
-        user = authenticate(request, email=email, password=password)
-        if user is not None:
-            login(request, user)
-            refresh = RefreshToken.for_user(user)
-            return Response(
-                {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                }
-            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        login(request, user)
+        refresh = RefreshToken.for_user(user)
         return Response(
-            {"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
         )
 
 
 class LogoutView(generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
+    serializer_class = EmptySerializer
 
     def post(self, request, *args, **kwargs):
         logout(request)
