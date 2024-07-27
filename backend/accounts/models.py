@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, RegexValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 
@@ -70,10 +70,31 @@ class Teacher(models.Model):
 
 
 class Student(models.Model):
+    ENGLISH_LEVEL_CHOICES = [
+        ("Elementary", "Elementary"),
+        ("Beginner", "Beginner"),
+        ("Intermediate", "Intermediate"),
+        ("Upper Intermediate", "Upper Intermediate"),
+        ("Advanced", "Advanced"),
+        ("Proficient", "Proficient"),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    grade = models.CharField(max_length=10, blank=True, null=True)
-    parent_contact = models.CharField(max_length=255, blank=True, null=True)
-    enrollment_date = models.DateField(blank=True, null=True)
+    grade = models.CharField(
+        max_length=20, choices=ENGLISH_LEVEL_CHOICES, blank=True, null=True
+    )
+    phone_number = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r"^\+?1?\d{9,15}$",
+                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+            )
+        ],
+    )
+    telegram_link = models.URLField(max_length=255, blank=True, null=True)
     assigned_teacher = models.ForeignKey(
         Teacher,
         on_delete=models.SET_NULL,

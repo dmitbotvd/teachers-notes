@@ -54,8 +54,8 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = [
             "user",
             "grade",
-            "parent_contact",
-            "enrollment_date",
+            "phone_number",
+            "telegram_link",
             "assigned_teacher",
         ]
 

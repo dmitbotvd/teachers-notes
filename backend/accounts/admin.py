@@ -1,7 +1,30 @@
-# accounts/admin.py
-
 from django.contrib import admin
-from .models import Teacher, Student
+from .models import Teacher, Student, User
+
+
+class TeacherInline(admin.StackedInline):
+    model = Teacher
+    can_delete = False
+    fields = ["subjects", "qualification", "experience"]
+    extra = 0
+
+
+class StudentInline(admin.StackedInline):
+    model = Student
+    can_delete = False
+    fields = ["grade", "phone_number", "telegram_link", "assigned_teacher"]
+    extra = 0
+
+
+class CustomUserAdmin(admin.ModelAdmin):
+    list_display = ("email", "first_name", "last_name", "is_staff", "is_active")
+    search_fields = ("email", "first_name", "last_name")
+    list_filter = ("is_staff", "is_active")
+    ordering = ("email",)
+    inlines = [TeacherInline, StudentInline]
+
+
+admin.site.register(User, CustomUserAdmin)
 
 
 class TeacherAdmin(admin.ModelAdmin):
@@ -32,6 +55,9 @@ class TeacherAdmin(admin.ModelAdmin):
 
     get_last_name.short_description = "Last Name"
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user")
+
 
 class StudentAdmin(admin.ModelAdmin):
     list_display = (
@@ -39,8 +65,8 @@ class StudentAdmin(admin.ModelAdmin):
         "get_first_name",
         "get_last_name",
         "grade",
-        "parent_contact",
-        "enrollment_date",
+        "phone_number",
+        "telegram_link",
         "assigned_teacher",
     )
     search_fields = (
@@ -50,7 +76,7 @@ class StudentAdmin(admin.ModelAdmin):
         "assigned_teacher__user__first_name",
         "assigned_teacher__user__last_name",
     )
-    list_filter = ("grade", "enrollment_date")
+    list_filter = ("grade",)
     ordering = ("user__last_name", "user__first_name")
 
     def get_email(self, obj):
@@ -67,6 +93,13 @@ class StudentAdmin(admin.ModelAdmin):
         return obj.user.last_name
 
     get_last_name.short_description = "Last Name"
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("user", "assigned_teacher__user")
+        )
 
 
 admin.site.register(Teacher, TeacherAdmin)
