@@ -1,13 +1,15 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, filters
 from rest_framework.exceptions import PermissionDenied
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Lesson, LessonPlan
 from .serializers import (
     LessonSerializer,
     LessonPlanTeacherSerializer,
     LessonPlanStudentSerializer,
 )
-from accounts.models import Teacher, Student
 from .permissions import IsTeacher, IsStudentOrTeacher
+from .filters import LessonPlanFilter
+from accounts.models import Teacher, Student
 
 
 class LessonViewSet(viewsets.ModelViewSet):
@@ -18,6 +20,14 @@ class LessonViewSet(viewsets.ModelViewSet):
 
 class LessonPlanViewSet(viewsets.ModelViewSet):
     queryset = LessonPlan.objects.all()
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = LessonPlanFilter
+    search_fields = ["lesson__title", "notes"]
+    ordering_fields = ["date_assigned", "due_date", "completed"]
     permission_classes = [permissions.IsAuthenticated, IsStudentOrTeacher]
 
     def get_serializer_class(self):
@@ -48,3 +58,18 @@ class LessonPlanViewSet(viewsets.ModelViewSet):
             instance.delete()
         else:
             raise PermissionDenied("Only teachers can delete lesson plans.")
+
+
+class CurrentLessonViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Lesson.objects.filter(
+                lesson_plans__teacher__user=self.request.user
+            ).distinct()
+        return Lesson.objects.filter(
+            lesson_plans__student__user=self.request.user
+        ).distinct()

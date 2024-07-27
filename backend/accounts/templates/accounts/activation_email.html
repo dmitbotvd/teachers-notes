@@ -1,14 +1,8 @@
+{% autoescape off %}
+Hi {{ user.first_name }},
 
-<!DOCTYPE html>
-<html>
-<body>
-    <p>Hi {{ user.first_name }},</p>
-    <p>Please click on the link below to activate your account:</p>
-    <p>
-        <a href="http://{{ domain }}{% url 'activate' uid=uid token=token %}">
-            Activate Now
-        </a>
-    </p>
-    <p>Thank you!</p>
-</body>
-</html>
+Please click on the link below to confirm your email address and complete the registration process:
+{{ activation_link }}
+
+Thank you!
+{% endautoescape %}

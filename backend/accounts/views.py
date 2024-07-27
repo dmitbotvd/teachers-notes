@@ -1,3 +1,4 @@
+from django.urls import reverse
 from rest_framework import generics, status, viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,7 +9,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
-from .models import User, Teacher, Student
+from accounts.models import User, Teacher, Student
 from .serializers import (
     UserSerializer,
     TeacherSerializer,
@@ -17,6 +18,10 @@ from .serializers import (
     LoginSerializer,
 )
 from .tokens import account_activation_token
+from .utils import generate_activation_token
+import jwt
+from django.conf import settings
+from .models import User
 
 
 class RegisterUserView(generics.CreateAPIView):
@@ -28,13 +33,15 @@ class RegisterUserView(generics.CreateAPIView):
         user = serializer.save(is_active=False)
         current_site = get_current_site(self.request)
         mail_subject = "Activate your account."
+        token = generate_activation_token(user)
+        activation_link = (
+            f"http://{current_site.domain}{reverse('activate')}?token={token}"
+        )
         message = render_to_string(
             "accounts/activation_email.html",
             {
                 "user": user,
-                "domain": current_site.domain,
-                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                "token": account_activation_token.make_token(user),
+                "activation_link": activation_link,
             },
         )
         to_email = serializer.validated_data.get("email")
@@ -55,13 +62,15 @@ class RegisterTeacherView(generics.CreateAPIView):
         teacher = serializer.save(user=user)
         current_site = get_current_site(self.request)
         mail_subject = "Activate your account."
+        token = generate_activation_token(user)
+        activation_link = (
+            f"http://{current_site.domain}{reverse('activate')}?token={token}"
+        )
         message = render_to_string(
             "accounts/activation_email.html",
             {
                 "user": user,
-                "domain": current_site.domain,
-                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                "token": account_activation_token.make_token(user),
+                "activation_link": activation_link,
             },
         )
         to_email = user.email
@@ -83,13 +92,15 @@ class RegisterStudentView(generics.CreateAPIView):
         student = serializer.save(user=user)
         current_site = get_current_site(self.request)
         mail_subject = "Activate your account."
+        token = generate_activation_token(user)
+        activation_link = (
+            f"http://{current_site.domain}{reverse('activate')}?token={token}"
+        )
         message = render_to_string(
             "accounts/activation_email.html",
             {
                 "user": user,
-                "domain": current_site.domain,
-                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                "token": account_activation_token.make_token(user),
+                "activation_link": activation_link,
             },
         )
         to_email = user.email
@@ -101,26 +112,35 @@ class RegisterStudentView(generics.CreateAPIView):
 class ActivateUserView(generics.GenericAPIView):
     permission_classes = (AllowAny,)
 
-    def get(self, request, uidb64, token, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
+        token = request.GET.get("token")
         try:
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            user = None
-        if user is not None and account_activation_token.check_token(user, token):
-            user.is_active = True
-            user.save()
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            user = User.objects.get(id=payload["user_id"])
+        except jwt.ExpiredSignatureError:
             return Response(
-                {
-                    "message": "Thank you for your email confirmation. Now you can login your account."
-                },
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response(
-                {"error": "Activation link is invalid!"},
+                {"error": "Activation link has expired"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except jwt.exceptions.DecodeError:
+            return Response(
+                {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if user.is_active:
+            return Response(
+                {"message": "Account already activated"}, status=status.HTTP_200_OK
+            )
+
+        user.is_active = True
+        user.save()
+        return Response(
+            {"message": "Account activated successfully"}, status=status.HTTP_200_OK
+        )
 
 
 class LoginView(generics.GenericAPIView):
