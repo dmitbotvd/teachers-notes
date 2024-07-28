@@ -5,7 +5,7 @@ from accounts.models import Teacher, Student, User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'avatar']
+        fields = ["email", "first_name", "last_name", "avatar"]
 
 
 class TeacherSerializer(serializers.ModelSerializer):
@@ -13,7 +13,7 @@ class TeacherSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Teacher
-        fields = ['user', 'subjects', 'qualification', 'experience']
+        fields = ["user", "subjects", "qualification", "experience"]
 
 
 class StudentSerializer(serializers.ModelSerializer):

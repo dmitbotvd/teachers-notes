@@ -21,7 +21,13 @@ SECRET_KEY = env("SECRET_KEY")
 
 DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "http://localhost:3000",
+    "127.0.0.1",
+    "localhost",
+    "http://localhost:8000",
+    "0.0.0.0",
+]
 
 # Application definition
 
@@ -34,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "django_filters",
     "drf_yasg",
     "accounts",
     "teachers",
@@ -129,6 +136,9 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
 }
 
 from datetime import timedelta
@@ -145,3 +155,9 @@ AUTH_USER_MODEL = "accounts.User"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 APPEND_SLASH = True
+
+
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:3000",
+    "http://0.0.0.0:3000",
+]
