@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "teachers",
     "students",
     "lessons",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
@@ -143,3 +144,4 @@ SIMPLE_JWT = {
 AUTH_USER_MODEL = "accounts.User"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+APPEND_SLASH = True

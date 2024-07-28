@@ -111,6 +111,7 @@ class RegisterStudentView(generics.CreateAPIView):
 
 class ActivateUserView(generics.GenericAPIView):
     permission_classes = (AllowAny,)
+    serializer_class = EmptySerializer
 
     def get(self, request, *args, **kwargs):
         token = request.GET.get("token")
